@@ -223,7 +223,7 @@ def Exercise9():
 
     # Plot the original h_n signal
     plt.figure(figsize=(10, 6))
-    plt.stem(n, h_n, basefmt=" ")
+    plt.plot(n, h_n)
     plt.title('Original Signal $h(n)$')
     plt.xlabel('$n$')
     plt.ylabel('$h(n)$')
@@ -240,7 +240,7 @@ def Exercise9():
 
     # Plot the transformed h_k signal
     plt.figure(figsize=(10, 6))
-    plt.stem(n, h_k, basefmt=" ")
+    plt.stem(n, np.imag(h_k))
     plt.title('Transformed Signal $h(k)$')
     plt.xlabel('$k$')
     plt.ylabel('$h(k)$')
@@ -333,11 +333,11 @@ def Exercise11():
         temp = 0
         for m in k:
             temp += a_k[m + 1000] * np.exp(1j * 2 * np.pi * m * n[ni] / N)
-        a_n[ni] = (1 / N) * temp
-
+        a_n[ni] = temp
+    a_n = a_n * (1 / N)
     # Plot a_n
     plt.figure(figsize=(10, 6))
-    plt.stem(n, a_n, basefmt=" ")
+    plt.plot(n, a_n)
     plt.title('Time-Domain Signal $a(n)$ for Gibbs')
     plt.xlabel('$n$')
     plt.ylabel('$a(n)$')
@@ -347,45 +347,55 @@ def Exercise11():
 
 def Exercise12(D=3):
     w = np.linspace(-np.pi, np.pi, 2001)  # We sampled it 2*pi/N times
-    N = 2001  # Number of samples
+    N = 2001  # Original number of samples
     n = np.arange(-1000, 1001)
 
     # Signal a(n)
     a_n = np.where(np.abs(n) < 100, 1, 0)
 
-    # It's the formula for DTFT, but we actually do a DFT
-    # when we sample on a single period of DTFT between -pi to pi
+    # DTFT
     X_1 = np.zeros_like(w, dtype=complex)
     for k in range(N):
         X_1 += a_n[k] * np.exp(-1j * w * k)
+    # for k in range(N):
+    #     k_shifted = (k + N // 2) % N  # Shift index to center the zero frequency component
+    #     X_1[k_shifted] = np.sum(a_n * np.exp(-1j * 2 * np.pi * k * np.arange(N) / N))
 
     # Plot X(jw)
     plt.figure(figsize=(10, 6))
-    plt.stem(w, X_1, basefmt=" ")
-    plt.title('DFT of $a(n)$')
+    plt.plot(w, np.real(X_1))
+    plt.title('Transform of $a(n)$')
     plt.xlabel('$k$')
     plt.ylabel('$X(k)$')
     plt.grid(True)
     plt.show()
 
-    # Decimation by a factor of D that we chose and DFT after it
-    a_dec_2 = np.zeros(N)
-    a_dec_2[::D] = a_n[::D]  # Sample every D indexes
+    # Decimation by a factor of D
+    a_dec_2 = a_n[::D]  # Proper decimation, taking every D-th sample
+    N_dec = len(a_dec_2)  # New length after decimation
 
-    X_2 = np.zeros(N, dtype=complex)
-    for k2 in range(N):
-        X_2 += a_dec_2[k2] * np.exp(-1j * w * k2)
+    # New frequency vector for decimated signal
+    w_dec = np.linspace(-np.pi, np.pi, N_dec)
 
+    # DTFT of the decimated signal
+    X_2 = np.zeros(N_dec, dtype=complex)
+    for k2 in range(N_dec):
+        X_2 += a_dec_2[k2] * np.exp(-1j * w_dec * k2)
+    # for k2 in range(N_dec):
+    #     k2_shifted = (k2 + N_dec // 2) % N_dec  # Shift index to center the zero frequency component
+    #     X_2[k2_shifted] = np.sum(a_dec_2 * np.exp(-1j * 2 * np.pi * k2 * np.arange(N_dec) / N_dec))
+
+    # Plot DTFT of the decimated signal
     plt.figure(figsize=(10, 6))
-    plt.stem(w, abs(X_2), basefmt=" ")
-    plt.title('DFT of $a_2(n)$')
+    plt.plot(w_dec, np.real(X_2))
+    plt.title('Transform of $a_{dec}(n)$ after Decimation by $D$')
     plt.xlabel('$k$')
-    plt.ylabel('$X(k)$')
+    plt.ylabel('$X_{dec}(k)$')
     plt.grid(True)
     plt.show()
 
 
-def Exercise13(padding=2, flag=True):
+def Exercise13(padding=3, flag=True):
     N = 2001  # Number of samples
     n = np.arange(-1000, 1001)
 
@@ -393,7 +403,7 @@ def Exercise13(padding=2, flag=True):
     a_n = np.where(np.abs(n) < 100, 1, 0)
     a_n_padded = []
     for coeff in range(N):
-        a_n_padded.append(a_n[coeff])  # Add the a_k coefficient
+        a_n_padded.append(a_n[coeff])  # Add the a_n coefficient
         if coeff != N - 1:
             a_n_padded.extend([0] * padding)  # Add the padding zeros
 
@@ -401,24 +411,25 @@ def Exercise13(padding=2, flag=True):
     N2 = len(a_n_padded)
     w = np.linspace(-np.pi, np.pi, N2)
     X_pad = np.zeros(N2, dtype=complex)
+    # DTFT
     for k in range(N2):
         X_pad += a_n_padded[k] * np.exp(-1j * w * k)
 
     if flag:
         # Plot X_2(k)
         plt.figure(figsize=(10, 6))
-        plt.stem(w, X_pad)
-        plt.title('DFT of $X_M(K)$ with Zero Padding')
+        plt.plot(w, np.real(X_pad))
+        plt.title('Transform of $X_M(K)$ with Zero Padding')
         plt.xlabel('Frequency: $K$')
         plt.ylabel('$X_M(K)$')
         plt.grid(True)
         plt.show()
-    return N2, X_pad, w
+    return N2, X_pad, w, a_n_padded
 
 
-def Exercise14(padding=2, flag=True):
+def Exercise14(padding=4, flag=True):
     # We receive the interpolated samples in frequency from exe13
-    N2, X_2, w_2 = Exercise13(padding, False)
+    N2, X_2, w_2, a_n_padded = Exercise13(padding, False)
 
     # Now build the filters
     cutoff_freq = np.pi / padding
@@ -436,61 +447,144 @@ def Exercise14(padding=2, flag=True):
     if flag:
         # Plot the filter
         plt.figure(figsize=(10, 6))
-        plt.stem(n_values, h_n)
-        plt.title('$H_M(K)$')
-        plt.xlabel('Frequency: $K$')
-        plt.ylabel('$H_M(K)$')
+        plt.plot(w_2, H_2)
+        plt.title('Frequency Response of the Filter $H_2$')
+        plt.xlabel('Frequency')
+        plt.ylabel('Amplitude')
         plt.grid(True)
         plt.show()
 
-    # Inverse DFT
+    # Inverse DTFT
     N = len(X_2_filtered)
     x_n = np.zeros(N, dtype=complex)
     for n in range(N):
         x_n[n] = np.sum(X_2_filtered * np.exp(1j * w_2 * n)) / N
 
     if flag:
-        # Plot X_2(k)
+        # Plot h_n[n]
         plt.figure(figsize=(10, 6))
-        plt.plot(n_values, x_n)
-        plt.title('DFT of $X_M(K)$ with Zero Padding')
-        plt.xlabel('Frequency: $K$')
-        plt.ylabel('$X_M(K)$')
+        plt.plot(n_values, np.real(x_n))
+        plt.title('Inverse Transform of $x_M(n)$ with Zero Padding')
+        plt.xlabel('$n$')
+        plt.ylabel('$x_M(n)$')
         plt.grid(True)
         plt.show()
 
-    return H_2, h_n, x_n
+    return h_n, x_n
 
 
-def Exercise15():
-    # TODO
-    pass
+def Exercise15(padding=4):
+    # Get the filter in time
+    h_n, x_n = Exercise14(padding, flag=False)
+
+    # Get the padded signals a_M[n]
+    N2, X_pad, w, a_n_padded = Exercise13(padding, flag=False)
+
+    # Now we do a convolution a_n_padded * h_n
+    # Lengths of the signals
+    len_a = len(a_n_padded)
+    len_h = len(h_n)
+    len_y = len_a + len_h - 1  # Length of the convolution result
+
+    # Initialize the output array
+    y_n = np.zeros(len_y, dtype=complex)
+
+    # Perform the convolution manually
+    for n in range(len_y):
+        sum_val = 0
+        for k in range(len_h):
+            if 0 <= n - k < len_a:
+                sum_val += a_n_padded[n - k] * h_n[k]
+        y_n[n] = sum_val
+
+    plt.figure(figsize=(10, 6))
+    plt.stem(w, np.real(h_n))
+    plt.title('Filter $h_n$')
+    plt.xlabel('$n$')
+    plt.ylabel('$h_n$')
+    plt.grid(True)
+    plt.show()
+
+    # Plot the result of the convolution
+    n = np.arange(-(len_y - 1) // 2, (len_y - 1) // 2 + 1)
+    plt.figure(figsize=(10, 6))
+    plt.plot(n, np.real(y_n))
+    plt.title('Convolution Result $a_M(n)$')
+    plt.xlabel('$n$')
+    plt.ylabel('$a_M(n)$')
+    plt.grid(True)
+    plt.show()
 
 
-def Exercise16():
-    # TODO
-    pass
+def Exercise16(padding=3):
+    # Get the padded signals a_M[n] from Exercise13
+    pad = padding
+    N, X_pad, n, a_n = Exercise13(padding=pad, flag=False)
+    T = pad + 1
 
+    # ZOH
+    n_zoh = np.arange(-(N - 1) / 2, (N - 1) / 2 + 1)
+    a_n_ZOH = []
+    for i, i_sample in enumerate(a_n):
+        if i % T == 0:
+            a_n_ZOH.append(i_sample)
+        else:
+            a_n_ZOH.append(a_n_ZOH[i - 1])
 
-def Exercise17():
-    # TODO
-    pass
+    # Plot the result of the ZOH interpolation
+    plt.figure(figsize=(10, 6))
+    plt.stem(n_zoh, a_n_ZOH, label='ZOH Interpolated Signal')
+    plt.title('ZOH Interpolated Signal $x_{zoh}[n]$')
+    plt.xlabel('$n$')
+    plt.ylabel('$x_{zoh}[n]$')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    # FOH
+    # Triangle filter
+    h_triangle = []
+    n_FOH = np.arange(-(N - 1) / 2, (N - 1) / 2 + 1)
+    for x in n_FOH:
+        if np.abs(x) > T:
+            h_triangle.append(0)
+        elif - T <= x <= 0:
+            h_triangle.append(1 + x / T)
+        else:
+            h_triangle.append(1 - x / T)
+    h_triangle = np.array(h_triangle)
+
+    # Manual convolution
+    conv_result = np.zeros(N)
+    pad_signal = np.pad(a_n, (N // 2, N // 2), mode='constant')
+
+    for i in range(N):
+        conv_result[i] = np.sum(pad_signal[i:i + N] * h_triangle[::-1])
+
+    # Plot the result of the FOH interpolation
+    plt.figure(figsize=(10, 6))
+    plt.stem(n_FOH, conv_result, label='FOH Interpolated Signal')
+    plt.title('FOH Interpolated Signal $x_{foh}[n]$')
+    plt.xlabel('$n$')
+    plt.ylabel('$x_{foh}[n]$')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
 
 if __name__ == '__main__':
-    # Exercise1()
-    # Exercise2()
-    # Exercise3()
-    # Exercise4()
-    # Exercise5()
-    # Exercise7()
-    # Exercise8()
-    # Exercise9()
-    # Exercise10()
-    # Exercise11()
-    # Exercise12()
-    # Exercise13()
-    Exercise14()
-    # Exercise15()
-    # Exercise16()
-    # Exercise17()
+    Exercise1()
+    #Exercise2()
+    #Exercise3()
+    #Exercise4()
+    #Exercise5()
+    #Exercise7()
+    #Exercise8()
+    #Exercise9()
+    #Exercise10()
+    #Exercise11()
+    #Exercise12()
+    #Exercise13()
+    #Exercise14()
+    #Exercise15()
+    #Exercise16()
